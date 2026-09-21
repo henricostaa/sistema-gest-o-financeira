@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useFinance } from '../../context/FinanceContext';
 import type { RecurrenceRule, Transaction } from '../../types/finance';
 import { parseCurrencyInput } from '../../utils/formatters';
-import { getNthBusinessDay, getFixedDayOfMonth } from '../../utils/dateUtils';
+import { getNthBusinessDay, getFixedDayOfMonth, addMonthsToDate } from '../../utils/dateUtils';
 import { X, Check, ArrowUpCircle, ArrowDownCircle, Repeat, CreditCard, Calendar } from 'lucide-react';
 
 interface TransactionModalProps {
@@ -119,11 +119,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     } else {
       // If user selected installments > 1 (e.g. 6x credit card purchase)
       if (installmentsCount > 1 && !isRecurring) {
-        const baseDate = new Date(date + 'T00:00:00');
         for (let i = 0; i < installmentsCount; i++) {
-          const installmentDate = new Date(baseDate);
-          installmentDate.setMonth(installmentDate.getMonth() + i);
-          const dateStr = installmentDate.toISOString().split('T')[0];
+          const dateStr = addMonthsToDate(date, i);
           const instNote = `${notes ? notes + ' ' : ''}(Parcela ${i + 1}/${installmentsCount})`;
           
           addTransaction({
@@ -321,7 +318,11 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                 className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 accent-emerald-600"
               />
               <Repeat className="h-4 w-4 text-emerald-500" />
-              <span>Fixa Recorrente (Repetir todo mês)</span>
+              <span>
+                {type === 'receita'
+                  ? 'Receita Fixa Recorrente (Repetir todo mês)'
+                  : 'Despesa Fixa Recorrente (Repetir todo mês)'}
+              </span>
             </label>
 
             {/* Recurrence Rule Options when isRecurring is true */}
@@ -359,26 +360,47 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             )}
 
             {!isRecurring && !editingTx && (
-              <div className="flex items-center justify-between pt-1 border-t border-slate-200 dark:border-slate-700">
-                <span className="font-medium text-slate-600 dark:text-slate-400 flex items-center gap-1">
-                  <CreditCard className="h-3.5 w-3.5 text-blue-500" />
-                  Parcelar no Cartão de Crédito:
-                </span>
-                <select
-                  value={installmentsCount}
-                  onChange={(e) => setInstallmentsCount(Number(e.target.value))}
-                  className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 font-bold text-slate-900 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                >
-                  <option value={1}>À vista (1x)</option>
-                  <option value={2}>2x</option>
-                  <option value={3}>3x</option>
-                  <option value={4}>4x</option>
-                  <option value={5}>5x</option>
-                  <option value={6}>6x</option>
-                  <option value={10}>10x</option>
-                  <option value={12}>12x</option>
-                  <option value={24}>24x</option>
-                </select>
+              <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-slate-700">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5 text-xs">
+                    <CreditCard className="h-4 w-4 text-blue-500" />
+                    <span>Parcelar no Cartão (Número de Vezes):</span>
+                  </span>
+                  <div className="flex items-center space-x-1">
+                    <input
+                      type="number"
+                      min="1"
+                      max="120"
+                      value={installmentsCount}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10);
+                        setInstallmentsCount(isNaN(val) || val < 1 ? 1 : val);
+                      }}
+                      className="w-16 rounded-lg border border-slate-300 bg-white px-2 py-1 text-center font-bold text-slate-900 focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white text-xs"
+                      placeholder="Ex: 12"
+                    />
+                    <span className="font-bold text-slate-600 dark:text-slate-400 text-xs">x</span>
+                  </div>
+                </div>
+
+                {/* Quick Presets */}
+                <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Atalhos:</span>
+                  {[1, 2, 3, 4, 6, 10, 12, 18, 24, 36].map((num) => (
+                    <button
+                      key={num}
+                      type="button"
+                      onClick={() => setInstallmentsCount(num)}
+                      className={`rounded-md px-2 py-0.5 text-[10px] font-bold transition ${
+                        installmentsCount === num
+                          ? 'bg-blue-600 text-white shadow-xs'
+                          : 'bg-slate-200 text-slate-700 hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600'
+                      }`}
+                    >
+                      {num === 1 ? '1x (À vista)' : `${num}x`}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </div>

@@ -266,8 +266,14 @@ export const TransactionsView: React.FC = () => {
                             {cat ? cat.name : 'Outros'}
                           </span>
                           {tx.isRecurring && (
-                            <span className="rounded-full bg-blue-500/10 px-2 py-0.5 text-[9px] font-bold text-blue-600 dark:text-blue-400 border border-blue-500/20">
-                              Despesa Fixa
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-[9px] font-bold border ${
+                                isIncome
+                                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                                  : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
+                              }`}
+                            >
+                              {isIncome ? 'Receita Fixa' : 'Despesa Fixa'}
                             </span>
                           )}
                         </div>
