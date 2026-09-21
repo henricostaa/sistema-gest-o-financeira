@@ -64,20 +64,25 @@ export interface AnnualMetrics {
 
 export const calculateAnnualMetrics = (
   transactions: Transaction[],
-  year: number
+  year: number,
+  getEffectiveTransactionsForMonthYear?: (month: number, year: number) => Transaction[]
 ): AnnualMetrics => {
-  const filtered = transactions.filter((t) => {
-    const d = new Date(t.date + 'T00:00:00');
-    return d.getFullYear() === year && t.status === 'pago';
-  });
-
   let annualIncome = 0;
   let annualExpense = 0;
 
-  filtered.forEach((t) => {
-    if (t.type === 'receita') annualIncome += t.amount;
-    else annualExpense += t.amount;
-  });
+  for (let m = 1; m <= 12; m++) {
+    const monthTxs = getEffectiveTransactionsForMonthYear
+      ? getEffectiveTransactionsForMonthYear(m, year)
+      : transactions.filter((t) => {
+          const d = new Date(t.date + 'T00:00:00');
+          return d.getFullYear() === year && d.getMonth() + 1 === m;
+        });
+
+    monthTxs.forEach((t) => {
+      if (t.type === 'receita') annualIncome += t.amount;
+      else annualExpense += t.amount;
+    });
+  }
 
   return {
     annualIncome,

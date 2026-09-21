@@ -34,6 +34,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     selectedMonth,
     selectedYear,
     transactions,
+    getEffectiveTransactionsForMonthYear,
     categories,
     budgets,
     debts,
@@ -42,14 +43,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     settings,
   } = useFinance();
 
+  const effectiveCurrentMonthTxs = getEffectiveTransactionsForMonthYear(selectedMonth, selectedYear);
+
   const monthlyMetrics = calculateMonthlyMetrics(
-    transactions,
+    effectiveCurrentMonthTxs,
     selectedMonth,
     selectedYear,
     settings.tithePercentage || 10
   );
 
-  const annualMetrics = calculateAnnualMetrics(transactions, selectedYear);
+  const annualMetrics = calculateAnnualMetrics(transactions, selectedYear, getEffectiveTransactionsForMonthYear);
   const debtMetrics = calculateDebtMetrics(debts, settings.debtClearanceTargetDate || '2026-12-31');
 
   // Emergency Fund progress
@@ -229,7 +232,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       {/* Recharts Graphs Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <MonthlyChart transactions={transactions} year={selectedYear} />
+          <MonthlyChart
+            transactions={transactions}
+            year={selectedYear}
+            getEffectiveTransactionsForMonthYear={getEffectiveTransactionsForMonthYear}
+          />
         </div>
         <div>
           <CategoryChart
@@ -237,6 +244,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             categories={categories}
             month={selectedMonth}
             year={selectedYear}
+            getEffectiveTransactionsForMonthYear={getEffectiveTransactionsForMonthYear}
           />
         </div>
       </div>

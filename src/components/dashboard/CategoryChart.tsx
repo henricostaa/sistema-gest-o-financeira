@@ -8,6 +8,7 @@ interface CategoryChartProps {
   categories: Category[];
   month: number;
   year: number;
+  getEffectiveTransactionsForMonthYear?: (month: number, year: number) => Transaction[];
 }
 
 export const CategoryChart: React.FC<CategoryChartProps> = ({
@@ -15,18 +16,25 @@ export const CategoryChart: React.FC<CategoryChartProps> = ({
   categories,
   month,
   year,
+  getEffectiveTransactionsForMonthYear,
 }) => {
-  // Filter paid expenses for selected month
+  const [statusFilter, setStatusFilter] = React.useState<'todos' | 'pago' | 'pendente'>('todos');
   const categoryTotals: { [categoryId: string]: number } = {};
 
-  transactions.forEach((t) => {
-    const d = new Date(t.date + 'T00:00:00');
-    if (
-      d.getMonth() + 1 === month &&
-      d.getFullYear() === year &&
-      t.type === 'despesa' &&
-      t.status === 'pago'
-    ) {
+  const monthTxs = getEffectiveTransactionsForMonthYear
+    ? getEffectiveTransactionsForMonthYear(month, year)
+    : transactions.filter((t) => {
+        const d = new Date(t.date + 'T00:00:00');
+        return d.getMonth() + 1 === month && d.getFullYear() === year;
+      });
+
+  monthTxs.forEach((t) => {
+    const matchStatus =
+      statusFilter === 'todos' ||
+      (statusFilter === 'pago' && t.status === 'pago') ||
+      (statusFilter === 'pendente' && t.status === 'pendente');
+
+    if (t.type === 'despesa' && matchStatus) {
       categoryTotals[t.categoryId] = (categoryTotals[t.categoryId] || 0) + t.amount;
     }
   });
@@ -65,11 +73,23 @@ export const CategoryChart: React.FC<CategoryChartProps> = ({
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-      <div className="mb-4">
-        <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-          Despesas por Categoria
-        </h3>
-        <p className="text-xs text-slate-500 dark:text-slate-400">Distribuição no mês</p>
+      <div className="mb-4 flex items-center justify-between gap-2">
+        <div>
+          <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+            Despesas por Categoria
+          </h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400">Distribuição no mês</p>
+        </div>
+
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value as any)}
+          className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] font-semibold text-slate-700 focus:outline-none dark:border-slate-800 dark:bg-slate-800 dark:text-slate-300"
+        >
+          <option value="todos">Todos os Status</option>
+          <option value="pago">Apenas Pagos</option>
+          <option value="pendente">Apenas Pendentes</option>
+        </select>
       </div>
 
       {chartData.length === 0 ? (

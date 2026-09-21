@@ -17,7 +17,13 @@ import {
   Clock,
   ArrowUpCircle,
   ArrowDownCircle,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from 'lucide-react';
+
+type SortField = 'date' | 'category' | 'amount' | 'paymentMethod' | 'status' | 'notes';
+type SortOrder = 'asc' | 'desc';
 
 export const TransactionsView: React.FC = () => {
   const {
@@ -41,6 +47,10 @@ export const TransactionsView: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterPaymentMethod, setFilterPaymentMethod] = useState<string>('all');
 
+  // Sorting state
+  const [sortField, setSortField] = useState<SortField | null>('date');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
+
   const handleOpenNew = () => {
     setEditingTx(null);
     setIsModalOpen(true);
@@ -60,6 +70,26 @@ export const TransactionsView: React.FC = () => {
   const handleToggleStatus = (tx: Transaction) => {
     const newStatus = tx.status === 'pago' ? 'pendente' : 'pago';
     updateTransaction(tx.id, { status: newStatus });
+  };
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      setSortOrder(field === 'amount' || field === 'date' ? 'desc' : 'asc');
+    }
+  };
+
+  const renderSortIcon = (field: SortField) => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="h-3.5 w-3.5 opacity-30 group-hover:opacity-75 transition shrink-0" />;
+    }
+    return sortOrder === 'asc' ? (
+      <ArrowUp className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+    ) : (
+      <ArrowDown className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+    );
   };
 
   // Obtain effective list for the selected period
@@ -87,8 +117,53 @@ export const TransactionsView: React.FC = () => {
     return true;
   });
 
+  // Sort transactions
+  const sortedTransactions = [...filteredTransactions].sort((a, b) => {
+    if (!sortField) return 0;
+
+    let comparison = 0;
+
+    switch (sortField) {
+      case 'date': {
+        comparison = a.date.localeCompare(b.date);
+        if (comparison === 0) {
+          comparison = a.type.localeCompare(b.type);
+        }
+        break;
+      }
+      case 'category': {
+        const catA = categories.find((c) => c.id === a.categoryId)?.name || '';
+        const catB = categories.find((c) => c.id === b.categoryId)?.name || '';
+        comparison = catA.localeCompare(catB, 'pt-BR');
+        break;
+      }
+      case 'amount': {
+        const valA = a.type === 'receita' ? a.amount : -a.amount;
+        const valB = b.type === 'receita' ? b.amount : -b.amount;
+        comparison = valA - valB;
+        break;
+      }
+      case 'paymentMethod': {
+        comparison = (a.paymentMethod || '').localeCompare(b.paymentMethod || '', 'pt-BR');
+        break;
+      }
+      case 'status': {
+        comparison = (a.status || '').localeCompare(b.status || '', 'pt-BR');
+        break;
+      }
+      case 'notes': {
+        comparison = (a.notes || '').localeCompare(b.notes || '', 'pt-BR');
+        break;
+      }
+      default:
+        comparison = 0;
+    }
+
+    return sortOrder === 'asc' ? comparison : -comparison;
+  });
+
   const handleExportCSV = () => {
-    exportToCSV(filteredTransactions, `lancamentos_${selectedMonth}_${selectedYear}.csv`);
+    exportToCSV(sortedTransactions, `lancamentos_${selectedMonth}_${selectedYear}.csv`);
   };
 
   return (
@@ -196,7 +271,7 @@ export const TransactionsView: React.FC = () => {
       </div>
 
       {/* Transactions List / Table */}
-      {filteredTransactions.length === 0 ? (
+      {sortedTransactions.length === 0 ? (
         <EmptyState
           icon={Receipt}
           title={transactions.length === 0 ? 'Cadastre sua primeira receita' : 'Nenhum lançamento encontrado'}
@@ -212,19 +287,67 @@ export const TransactionsView: React.FC = () => {
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="border-b border-slate-200 bg-slate-50 text-slate-500 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-400 font-semibold">
+              <thead className="border-b border-slate-200 bg-slate-50 text-slate-500 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-400 font-semibold select-none">
                 <tr>
-                  <th className="px-4 py-3">Tipo / Data</th>
-                  <th className="px-4 py-3">Categoria</th>
-                  <th className="px-4 py-3">Valor</th>
-                  <th className="px-4 py-3">Forma de Pagamento</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Observação</th>
+                  <th
+                    onClick={() => handleSort('date')}
+                    className="px-4 py-3 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/80 transition group"
+                  >
+                    <div className="flex items-center space-x-1.5">
+                      <span>Tipo / Data</span>
+                      {renderSortIcon('date')}
+                    </div>
+                  </th>
+                  <th
+                    onClick={() => handleSort('category')}
+                    className="px-4 py-3 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/80 transition group"
+                  >
+                    <div className="flex items-center space-x-1.5">
+                      <span>Categoria</span>
+                      {renderSortIcon('category')}
+                    </div>
+                  </th>
+                  <th
+                    onClick={() => handleSort('amount')}
+                    className="px-4 py-3 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/80 transition group"
+                  >
+                    <div className="flex items-center space-x-1.5">
+                      <span>Valor</span>
+                      {renderSortIcon('amount')}
+                    </div>
+                  </th>
+                  <th
+                    onClick={() => handleSort('paymentMethod')}
+                    className="px-4 py-3 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/80 transition group"
+                  >
+                    <div className="flex items-center space-x-1.5">
+                      <span>Forma de Pagamento</span>
+                      {renderSortIcon('paymentMethod')}
+                    </div>
+                  </th>
+                  <th
+                    onClick={() => handleSort('status')}
+                    className="px-4 py-3 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/80 transition group"
+                  >
+                    <div className="flex items-center space-x-1.5">
+                      <span>Status</span>
+                      {renderSortIcon('status')}
+                    </div>
+                  </th>
+                  <th
+                    onClick={() => handleSort('notes')}
+                    className="px-4 py-3 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/80 transition group"
+                  >
+                    <div className="flex items-center space-x-1.5">
+                      <span>Observação</span>
+                      {renderSortIcon('notes')}
+                    </div>
+                  </th>
                   <th className="px-4 py-3 text-right">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {filteredTransactions.map((tx) => {
+                {sortedTransactions.map((tx) => {
                   const cat = categories.find((c) => c.id === tx.categoryId);
                   const isIncome = tx.type === 'receita';
                   const isPaid = tx.status === 'pago';
