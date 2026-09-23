@@ -105,7 +105,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenNewTransaction }) => {
 
         {/* User profile */}
         <div className="hidden md:flex items-center space-x-2 border-l border-slate-200 pl-3 dark:border-slate-800">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-800 text-white dark:bg-emerald-600 font-bold text-xs">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-600 text-white font-bold text-xs">
             {user?.name ? user.name.charAt(0).toUpperCase() : <User className="h-4 w-4" />}
           </div>
           <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{user?.name || 'Usuário'}</span>

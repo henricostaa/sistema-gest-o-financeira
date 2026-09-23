@@ -3,7 +3,7 @@ import { useFinance } from '../../context/FinanceContext';
 import type { RecurrenceRule, Transaction } from '../../types/finance';
 import { parseCurrencyInput } from '../../utils/formatters';
 import { getNthBusinessDay, getFixedDayOfMonth, addMonthsToDate } from '../../utils/dateUtils';
-import { X, Check, ArrowUpCircle, ArrowDownCircle, Repeat, CreditCard, Calendar } from 'lucide-react';
+import { X, Check, ArrowUpCircle, ArrowDownCircle, Repeat, CreditCard, Calendar, Clock } from 'lucide-react';
 
 interface TransactionModalProps {
   isOpen: boolean;
@@ -28,6 +28,10 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const [isRecurring, setIsRecurring] = useState<boolean>(false);
   const [recurrenceRule, setRecurrenceRule] = useState<RecurrenceRule>('fixed_day');
   const [recurrenceDay, setRecurrenceDay] = useState<number>(27);
+  const [hasRecurrenceLimit, setHasRecurrenceLimit] = useState<boolean>(false);
+  const [recurrenceEndType, setRecurrenceEndType] = useState<'duration' | 'date'>('duration');
+  const [recurrenceDurationMonths, setRecurrenceDurationMonths] = useState<number>(12);
+  const [recurrenceEndDate, setRecurrenceEndDate] = useState<string>('');
   const [installmentsCount, setInstallmentsCount] = useState<number>(1);
 
   useEffect(() => {
@@ -42,6 +46,10 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       setIsRecurring(editingTx.isRecurring || false);
       setRecurrenceRule(editingTx.recurrenceRule || 'fixed_day');
       setRecurrenceDay(editingTx.recurrenceDay || 27);
+      setHasRecurrenceLimit(editingTx.hasRecurrenceLimit || false);
+      setRecurrenceEndType(editingTx.recurrenceEndType || 'duration');
+      setRecurrenceDurationMonths(editingTx.recurrenceDurationMonths || 12);
+      setRecurrenceEndDate(editingTx.recurrenceEndDate || '');
       setInstallmentsCount(editingTx.installmentsCount || 1);
     } else {
       setType('despesa');
@@ -53,6 +61,10 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       setIsRecurring(false);
       setRecurrenceRule('fixed_day');
       setRecurrenceDay(27);
+      setHasRecurrenceLimit(false);
+      setRecurrenceEndType('duration');
+      setRecurrenceDurationMonths(12);
+      setRecurrenceEndDate('');
       setInstallmentsCount(1);
     }
   }, [editingTx, isOpen]);
@@ -114,6 +126,10 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         isRecurring,
         recurrenceRule,
         recurrenceDay,
+        hasRecurrenceLimit,
+        recurrenceEndType,
+        recurrenceDurationMonths,
+        recurrenceEndDate,
         installmentsCount,
       });
     } else {
@@ -148,6 +164,10 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           isRecurring,
           recurrenceRule,
           recurrenceDay,
+          hasRecurrenceLimit,
+          recurrenceEndType,
+          recurrenceDurationMonths,
+          recurrenceEndDate,
           installmentsCount: 1,
           currentInstallment: 1,
         });
@@ -356,6 +376,117 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                     />
                   </div>
                 )}
+
+                {/* Prazo / Vigência da Recorrência */}
+                <div className="pt-2.5 border-t border-slate-200 dark:border-slate-700 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                      <Clock className="h-3.5 w-3.5 text-emerald-500" />
+                      <span>Prazo de Vigência / Contrato:</span>
+                    </label>
+                    <label className="flex items-center space-x-1.5 cursor-pointer text-[11px] font-medium text-slate-700 dark:text-slate-300">
+                      <input
+                        type="checkbox"
+                        checked={hasRecurrenceLimit}
+                        onChange={(e) => setHasRecurrenceLimit(e.target.checked)}
+                        className="h-3.5 w-3.5 rounded border-slate-300 text-emerald-600 accent-emerald-600"
+                      />
+                      <span>Definir prazo limitado</span>
+                    </label>
+                  </div>
+
+                  {hasRecurrenceLimit && (
+                    <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 space-y-2.5">
+                      <div className="flex items-center space-x-4 text-xs font-semibold text-slate-800 dark:text-slate-200">
+                        <label className="flex items-center space-x-1.5 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="endType"
+                            checked={recurrenceEndType === 'duration'}
+                            onChange={() => setRecurrenceEndType('duration')}
+                            className="accent-emerald-600"
+                          />
+                          <span>Duração em meses</span>
+                        </label>
+                        <label className="flex items-center space-x-1.5 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="endType"
+                            checked={recurrenceEndType === 'date'}
+                            onChange={() => setRecurrenceEndType('date')}
+                            className="accent-emerald-600"
+                          />
+                          <span>Data limite final</span>
+                        </label>
+                      </div>
+
+                      {recurrenceEndType === 'duration' ? (
+                        <div className="space-y-2">
+                          <div className="flex items-center space-x-2">
+                            <span className="text-slate-600 dark:text-slate-400 text-xs">Período de vigência:</span>
+                            <input
+                              type="number"
+                              min="1"
+                              max="120"
+                              value={recurrenceDurationMonths}
+                              onChange={(e) => {
+                                const val = parseInt(e.target.value, 10);
+                                setRecurrenceDurationMonths(isNaN(val) || val < 1 ? 1 : val);
+                              }}
+                              className="w-16 rounded-lg border border-slate-300 bg-white px-2 py-1 text-center font-extrabold text-slate-900 focus:border-emerald-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white text-xs"
+                            />
+                            <span className="text-slate-700 dark:text-slate-300 text-xs font-bold">
+                              {recurrenceDurationMonths === 1
+                                ? 'mês'
+                                : recurrenceDurationMonths % 12 === 0
+                                ? `meses (${recurrenceDurationMonths / 12} ${recurrenceDurationMonths / 12 === 1 ? 'ano' : 'anos'})`
+                                : 'meses'}
+                            </span>
+                          </div>
+
+                          {/* Quick Presets for Duration */}
+                          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Atalhos:</span>
+                            {[3, 6, 12, 18, 24, 36].map((m) => (
+                              <button
+                                key={m}
+                                type="button"
+                                onClick={() => setRecurrenceDurationMonths(m)}
+                                className={`rounded-md px-2 py-0.5 text-[10px] font-bold transition ${
+                                  recurrenceDurationMonths === m
+                                    ? 'bg-emerald-600 text-white shadow-xs'
+                                    : 'bg-white text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
+                                }`}
+                              >
+                                {m === 12 ? '12x (1 ano)' : m === 24 ? '24x (2 anos)' : m === 36 ? '36x (3 anos)' : `${m} meses`}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center space-x-2">
+                          <span className="text-slate-600 dark:text-slate-400 text-xs font-medium">Válido até:</span>
+                          <input
+                            type="date"
+                            value={recurrenceEndDate}
+                            onChange={(e) => setRecurrenceEndDate(e.target.value)}
+                            className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs text-slate-900 focus:border-emerald-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white font-semibold"
+                          />
+                        </div>
+                      )}
+
+                      <p className="text-[10px] text-emerald-700 dark:text-emerald-300 font-medium italic">
+                        {type === 'receita' ? 'Esta receita' : 'Esta despesa'} será repetida mensalmente{' '}
+                        {recurrenceEndType === 'duration'
+                          ? `por ${recurrenceDurationMonths} ${recurrenceDurationMonths === 1 ? 'mês' : 'meses'}`
+                          : recurrenceEndDate
+                          ? `até ${recurrenceEndDate}`
+                          : 'até a data definida'}
+                        .
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 

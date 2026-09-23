@@ -270,6 +270,25 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const tMonth = d.getMonth() + 1;
         if (tYear > year || (tYear === year && tMonth >= month)) return false;
 
+        // Check recurrence limit / validity period
+        if (t.hasRecurrenceLimit) {
+          if (t.recurrenceEndType === 'date' && t.recurrenceEndDate) {
+            const endDateParts = t.recurrenceEndDate.split('-');
+            const endYear = parseInt(endDateParts[0], 10);
+            const endMonth = parseInt(endDateParts[1], 10);
+            if (!isNaN(endYear) && !isNaN(endMonth)) {
+              if (year > endYear || (year === endYear && month > endMonth)) {
+                return false; // Out of validity range
+              }
+            }
+          } else if (t.recurrenceDurationMonths && t.recurrenceDurationMonths > 0) {
+            const monthDiff = (year - tYear) * 12 + (month - tMonth);
+            if (monthDiff >= t.recurrenceDurationMonths) {
+              return false; // Exceeded duration limit in months
+            }
+          }
+        }
+
         // Check if an explicit transaction for this category already exists in target (month, year)
         const existsInTargetMonth = exactMonthTxs.some(
           (et) => et.categoryId === t.categoryId && Math.abs(et.amount - t.amount) < 0.01
@@ -293,12 +312,21 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           calculatedDateStr = getFixedDayOfMonth(year, month, origDay);
         }
 
+        const d = new Date(t.date + 'T00:00:00');
+        const tYear = d.getFullYear();
+        const tMonth = d.getMonth() + 1;
+        const currentMonthNum = (year - tYear) * 12 + (month - tMonth) + 1;
+        let limitSuffix = '';
+        if (t.hasRecurrenceLimit && t.recurrenceDurationMonths) {
+          limitSuffix = ` - Mês ${currentMonthNum}/${t.recurrenceDurationMonths}`;
+        }
+
         return {
           ...t,
           id: `rec-${t.id}-${year}-${month}`,
           date: calculatedDateStr,
           status: 'pendente' as const,
-          notes: `${t.notes || ''} [Recorrente Mensal]`,
+          notes: `${t.notes || ''} [Recorrente Mensal${limitSuffix}]`,
         };
       });
 

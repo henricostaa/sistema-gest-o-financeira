@@ -397,6 +397,12 @@ export const TransactionsView: React.FC = () => {
                               }`}
                             >
                               {isIncome ? 'Receita Fixa' : 'Despesa Fixa'}
+                              {tx.hasRecurrenceLimit &&
+                                (tx.recurrenceDurationMonths
+                                  ? ` (${tx.recurrenceDurationMonths} meses)`
+                                  : tx.recurrenceEndDate
+                                  ? ` (Até ${tx.recurrenceEndDate})`
+                                  : '')}
                             </span>
                           )}
                         </div>

@@ -15,6 +15,10 @@ export interface Transaction {
   isRecurring?: boolean; // Marca como despesa/receita fixa mensal
   recurrenceRule?: RecurrenceRule; // ex: 4th_business_day ou fixed_day (dia 27)
   recurrenceDay?: number; // ex: 27
+  hasRecurrenceLimit?: boolean; // Se possui prazo de vigência/contrato
+  recurrenceEndType?: 'duration' | 'date'; // 'duration' (em meses) ou 'date' (data final YYYY-MM-DD)
+  recurrenceDurationMonths?: number; // Quantidade de meses de vigência (ex: 12)
+  recurrenceEndDate?: string; // Data final da vigência YYYY-MM-DD
   installmentsCount?: number; // Total de parcelas (ex: 12)
   currentInstallment?: number; // Parcela atual (ex: 1)
   createdAt: string;
