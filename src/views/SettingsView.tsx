@@ -10,7 +10,6 @@ import {
   Download,
   Upload,
   RefreshCw,
-  Database,
   PlusCircle,
   Trash2,
   Check,
@@ -47,9 +46,7 @@ export const SettingsView: React.FC = () => {
   const [tithePct, setTithePct] = useState(settings.tithePercentage.toString());
   const [debtDate, setDebtDate] = useState(settings.debtClearanceTargetDate || '2026-12-31');
 
-  // Supabase input
-  const [supaUrl, setSupaUrl] = useState(settings.supabaseUrl || '');
-  const [supaKey, setSupaKey] = useState(settings.supabaseAnonKey || '');
+
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const csvInputRef = useRef<HTMLInputElement>(null);
@@ -59,8 +56,6 @@ export const SettingsView: React.FC = () => {
     updateSettings({
       tithePercentage: parseFloat(tithePct) || 10,
       debtClearanceTargetDate: debtDate,
-      supabaseUrl: supaUrl,
-      supabaseAnonKey: supaKey,
     });
     alert('Configurações salvas com sucesso!');
   };
@@ -214,40 +209,7 @@ export const SettingsView: React.FC = () => {
           </div>
         </div>
 
-        {/* Supabase optional credentials */}
-        <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-3">
-          <div className="flex items-center space-x-2 text-xs font-bold text-slate-900 dark:text-white">
-            <Database className="h-4 w-4 text-emerald-500" />
-            <span>Sincronização com Supabase / PostgreSQL (Opcional)</span>
-          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-[11px] text-slate-500 dark:text-slate-400 mb-1">
-                URL do Projeto Supabase
-              </label>
-              <input
-                type="text"
-                placeholder="https://xxx.supabase.co"
-                value={supaUrl}
-                onChange={(e) => setSupaUrl(e.target.value)}
-                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 focus:border-emerald-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-              />
-            </div>
-            <div>
-              <label className="block text-[11px] text-slate-500 dark:text-slate-400 mb-1">
-                Chave Anon (Public Key)
-              </label>
-              <input
-                type="password"
-                placeholder="eyJhbGciOiJIUzI1NiIsInR5..."
-                value={supaKey}
-                onChange={(e) => setSupaKey(e.target.value)}
-                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 focus:border-emerald-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-              />
-            </div>
-          </div>
-        </div>
 
         <button
           type="submit"

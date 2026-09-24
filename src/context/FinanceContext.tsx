@@ -15,6 +15,7 @@ import type {
 import { DEFAULT_SETTINGS, INITIAL_CATEGORIES, INITIAL_PAYMENT_METHODS } from '../utils/constants';
 
 import { getNthBusinessDay, getFixedDayOfMonth } from '../utils/dateUtils';
+import { getSupabaseClient } from '../supabase/client';
 
 const STORAGE_KEY_PREFIX = 'finance_app_v1_';
 
@@ -213,6 +214,85 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY_PREFIX + 'user', JSON.stringify(user));
   }, [user]);
+
+  // Sync Supabase Auth session (OAuth callbacks, token persistence, auto-login)
+  useEffect(() => {
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+
+    let isMounted = true;
+
+    const syncUserFromSession = async (sessionUser: any) => {
+      if (!sessionUser) return;
+
+      let name =
+        sessionUser.user_metadata?.full_name ||
+        sessionUser.user_metadata?.name ||
+        sessionUser.email?.split('@')[0] ||
+        'Usuário';
+      let avatarUrl = sessionUser.user_metadata?.avatar_url || sessionUser.user_metadata?.picture;
+
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('name, avatar_url')
+          .eq('id', sessionUser.id)
+          .maybeSingle();
+
+        if (profile) {
+          if (profile.name) name = profile.name;
+          if (profile.avatar_url) avatarUrl = profile.avatar_url;
+        }
+      } catch {
+        // Ignore profile query failure
+      }
+
+      if (!isMounted) return;
+
+      const newUser: UserProfile = {
+        id: sessionUser.id,
+        name,
+        email: sessionUser.email || '',
+        avatarUrl,
+      };
+
+      setUser((prev) => {
+        if (
+          prev &&
+          prev.id === newUser.id &&
+          prev.name === newUser.name &&
+          prev.email === newUser.email &&
+          prev.avatarUrl === newUser.avatarUrl
+        ) {
+          return prev;
+        }
+        return newUser;
+      });
+    };
+
+    // Check current session on load
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        syncUserFromSession(session.user);
+      }
+    });
+
+    // Listen for Auth changes (OAuth login completion, sign-outs)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user) {
+        syncUserFromSession(session.user);
+      } else if (event === 'SIGNED_OUT') {
+        if (isMounted) {
+          setUser(null);
+        }
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+  }, [settings.supabaseUrl, settings.supabaseAnonKey]);
 
   const setSelectedMonthYear = (month: number, year: number) => {
     setSelectedMonth(month);

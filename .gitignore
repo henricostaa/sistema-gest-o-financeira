@@ -1,3 +1,21 @@
+# Dependencies
+node_modules/
+
+# Production & Build outputs
+dist/
+dist-ssr/
+build/
+out/
+
+# Environment variables & secrets (Security)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env.local
+!.env.example
+
 # Logs
 logs
 *.log
@@ -7,18 +25,41 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
+# Editor & IDE directories
 .vscode/*
 !.vscode/extensions.json
-.idea
-.DS_Store
+!.vscode/settings.json
+.idea/
+.vs/
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+*.user
+
+# Operating System files
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+Desktop.ini
+ehthumbs.db
+
+# Testing & Coverage
+coverage/
+.nyc_output/
+test-results/
+
+# Agent / AI workspace settings
+.agents/
+.gemini/
+
+# Temporary & Cache files
+.cache/
+.vite/
+.eslintcache
+*.tmp
+*.temp
+*.bak
+

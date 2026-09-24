@@ -16,6 +16,31 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 2.1 TRIGGER AUTOMÁTICO DE CRIAÇÃO DE PERFIL
+-- Sempre que um novo usuário for cadastrado via Supabase Auth (auth.users),
+-- esta função insere automaticamente uma linha na tabela public.profiles.
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.profiles (id, email, name, avatar_url)
+  VALUES (
+    new.id,
+    new.email,
+    COALESCE(new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)),
+    new.raw_user_meta_data->>'avatar_url'
+  )
+  ON CONFLICT (id) DO UPDATE
+  SET name = EXCLUDED.name, email = EXCLUDED.email;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Associa a função acima ao evento de inserção em auth.users
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
 -- 3. TABELA DE CATEGORIAS
 CREATE TABLE IF NOT EXISTS public.categories (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -150,13 +175,38 @@ ALTER TABLE public.emergency_fund_contributions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.financial_goals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.settings ENABLE ROW LEVEL SECURITY;
 
--- POLÍTICAS: Cada usuário só acessa seus próprios registros
-CREATE POLICY "Acesso perfil proprietário" ON public.profiles FOR ALL USING (auth.uid() = id);
+-- POLÍTICAS DA TABELA PROFILES
+DROP POLICY IF EXISTS "Leitura de perfil proprietario" ON public.profiles;
+CREATE POLICY "Leitura de perfil proprietario" ON public.profiles FOR SELECT USING (auth.uid() = id);
+
+DROP POLICY IF EXISTS "Atualizacao de perfil proprietario" ON public.profiles;
+CREATE POLICY "Atualizacao de perfil proprietario" ON public.profiles FOR UPDATE USING (auth.uid() = id);
+
+DROP POLICY IF EXISTS "Insercao de perfil proprietario" ON public.profiles;
+CREATE POLICY "Insercao de perfil proprietario" ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id);
+
+-- POLÍTICAS DAS DEMAIS TABELAS (Cada usuário só acessa seus próprios registros)
+DROP POLICY IF EXISTS "Acesso categorias proprietário" ON public.categories;
 CREATE POLICY "Acesso categorias proprietário" ON public.categories FOR ALL USING (auth.uid() = user_id OR is_default = TRUE);
+
+DROP POLICY IF EXISTS "Acesso pagamentos proprietário" ON public.payment_methods;
 CREATE POLICY "Acesso pagamentos proprietário" ON public.payment_methods FOR ALL USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Acesso transações proprietário" ON public.transactions;
 CREATE POLICY "Acesso transações proprietário" ON public.transactions FOR ALL USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Acesso orçamento proprietário" ON public.monthly_budgets;
 CREATE POLICY "Acesso orçamento proprietário" ON public.monthly_budgets FOR ALL USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Acesso dívidas proprietário" ON public.debts;
 CREATE POLICY "Acesso dívidas proprietário" ON public.debts FOR ALL USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Acesso metas proprietário" ON public.financial_goals;
 CREATE POLICY "Acesso metas proprietário" ON public.financial_goals FOR ALL USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Acesso reserva proprietário" ON public.emergency_fund;
 CREATE POLICY "Acesso reserva proprietário" ON public.emergency_fund FOR ALL USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Acesso configuracoes proprietário" ON public.settings;
 CREATE POLICY "Acesso configuracoes proprietário" ON public.settings FOR ALL USING (auth.uid() = user_id);
+
